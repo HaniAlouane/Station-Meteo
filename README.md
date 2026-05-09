@@ -1,61 +1,49 @@
-# 🌤️ Station Météorologique Connectée - Projet L3 SPI
+# Station Météorologique Connectée - Projet L3 SPI
 
-![MicroPython](https://img.shields.io/badge/MicroPython-1.20-blue?style=for-the-badge&logo=python)
-![Raspberry Pi](https://img.shields.io/badge/Raspberry%20Pi-Pico%202%20WH-red?style=for-the-badge&logo=raspberrypi)
-![MQTT](https://img.shields.io/badge/MQTT-Adafruit%20IO-yellow?style=for-the-badge)
-![Node-RED](https://img.shields.io/badge/Node--RED-Dashboard-darkred?style=for-the-badge&logo=nodered)
+Ce dépôt contient le code source et l'architecture logicielle d'une station météorologique connectée, développée dans le cadre de ma 3ème année de Licence Sciences pour l'Ingénieur (Spécialité ESR) à l'Université Sorbonne Paris Nord.
 
-Bienvenue sur le dépôt officiel de notre projet d'ingénierie ! 🎓 
-Ce projet a été réalisé dans le cadre de notre 3ème année de Licence Sciences pour l'Ingénieur (Spécialité ESR) à l'Université Sorbonne Paris Nord.
-
-Notre objectif ? Concevoir de A à Z une station météo robuste, capable de mesurer 5 grandeurs physiques et de transmettre ses données intelligemment, que ce soit sur un banc de test ou en totale autonomie en extérieur.
+L'objectif de ce projet est de proposer un système d'acquisition robuste capable de mesurer 5 grandeurs physiques et d'adapter sa transmission de données selon son environnement énergétique et réseau.
 
 ---
 
-## ✨ Fonctionnalités principales
+## Fonctionnalités principales
 
-Notre station ne se contente pas de lire des capteurs, elle s'adapte à son environnement réseau grâce à une architecture hybride :
+L'architecture logicielle repose sur deux modes de fonctionnement :
 
-* 🔌 **Mode Filaire (Nominal) :** Transmission série asynchrone vers un ordinateur local faisant tourner Node-RED (envoi au format JSON).
-* 📡 **Mode Autonome (Secours/Extérieur) :** Si Node-RED n'est pas détecté (mécanisme de *Heartbeat*), la station bascule automatiquement sur sa puce Wi-Fi pour envoyer ses données vers le Cloud Adafruit IO via le protocole MQTT.
-* 🛡️ **Résilience :** Gestion automatique des micro-coupures Wi-Fi et reconnexion autonome.
+* **Mode Filaire (Nominal) :** Transmission série asynchrone vers un ordinateur local exécutant Node-RED. Les données sont envoyées sous forme de trames JSON.
+* **Mode Autonome (Secours) :** En l'absence de Node-RED (détectée via un mécanisme de polling/heartbeat), la station bascule sur son interface Wi-Fi pour publier ses mesures sur le broker MQTT Adafruit IO.
 
-## 🛠️ Matériel & Capteurs
+Le programme intègre également une gestion des micro-coupures réseau avec tentative de reconnexion automatique.
 
-La station s'articule autour d'une **Raspberry Pi Pico 2 WH** et exploite différents protocoles d'acquisition :
+## Matériel et Capteurs
 
-* **BME280 (I2C) :** Température numérique, Humidité et Pression atmosphérique.
-* **VEML7700 (I2C) :** Luminosité ambiante (en Lux).
-* **LM335 (Analogique - ADC) :** Température analogique avec filtrage par suréchantillonnage (*oversampling*).
-* **Anémomètre 3D (Impulsionnel) :** Vitesse du vent calculée par détection de période via un capteur à effet Hall (trigger de Schmitt logiciel).
-* **Alimentation :** Module LiPo Rider Plus + Accu 18650 (2600 mAh) pour le mode autonome.
+Le système est architecturé autour d'une **Raspberry Pi Pico 2 WH** programmée en MicroPython, interfacée avec les composants suivants :
 
-## 📂 Architecture du dépôt
+* **BME280 (Bus I2C) :** Mesure de la température, humidité et pression atmosphérique.
+* **VEML7700 (Bus I2C) :** Mesure de la luminosité ambiante.
+* **LM335 (Analogique) :** Mesure de la température avec conditionnement et oversampling logiciel (10 échantillons).
+* **Anémomètre à coupelles :** Mesure de la vitesse du vent par détection impulsionnelle (capteur à effet Hall et trigger de Schmitt logiciel).
+* **Alimentation :** Module LiPo Rider Plus + Accumulateur Li-Ion 18650 (2600 mAh).
 
-* 📁 `/` (Racine) : Contient le script principal `main.py` qui orchestre l'acquisition et la transmission.
-* 📄 `capteur_bme.py`, `anemometre.py`... : Pilotes orientés objet pour chaque capteur encapsulant la complexité matérielle.
-* 📄 `flows.json` : Fichier d'export de notre architecture Node-RED (à importer directement dans votre interface logicielle).
+## Structure du dépôt
 
-## 🚀 Installation et Utilisation
+* `main.py` : Boucle principale non-bloquante gérant l'acquisition temps réel et le routage des données.
+* `capteur_bme.py`, `anemometre.py`, etc. : Classes encapsulant la configuration et la lecture de chaque capteur (Programmation Orientée Objet).
+* `flows.json` : Fichier de configuration de l'architecture Node-RED (traitement, multiplexage et passerelle MQTT).
 
-1.  Flashez votre Raspberry Pi Pico 2 avec le firmware **MicroPython**.
-2.  Déposez l'ensemble des scripts `.py` à la racine de la carte via Thonny IDE.
-3.  ⚠️ **Important :** Avant de lancer le script, ouvrez `main.py` et modifiez les constantes réseaux avec vos propres identifiants. Ne publiez jamais vos clés secrètes en ligne !
+## Instructions d'installation
+
+1. Flasher la Raspberry Pi Pico 2 WH avec l'environnement MicroPython.
+2. Transférer les scripts `.py` à la racine du microcontrôleur.
+3. Avant l'exécution, renseigner les identifiants locaux dans le fichier `main.py` :
     ```python
-    WIFI_SSID = "VOTRE_RESEAU_WIFI"
-    WIFI_PASSWORD = "VOTRE_MOT_DE_PASSE"
-    ADAFRUIT_USER = "VOTRE_IDENTIFIANT_AIO"
-    ADAFRUIT_KEY = "VOTRE_CLE_SECRETE"
+    WIFI_SSID = "NOM_DU_RESEAU"
+    WIFI_PASSWORD = "MOT_DE_PASSE"
+    ADAFRUIT_USER = "IDENTIFIANT_AIO"
+    ADAFRUIT_KEY = "CLE_AIO"
     ```
-4.  Importez `flows.json` dans votre Node-RED local pour visualiser le tableau de bord.
+4. Importer le fichier `flows.json` dans un environnement Node-RED local.
 
 ---
 
-## 👥 L'Équipe Projet
-
-Ce prototype est le fruit d'un travail collectif mêlant impression 3D, câblage électronique et développement logiciel. 
-
-* **Hani ALOUANE**
-* **Mayssa AIT OUAZZOU**
-* **Mohammed CHERIF**
-* **Andy MBA MEBIAME**
+**Auteur :** Hani ALOUANE

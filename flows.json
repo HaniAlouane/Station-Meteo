@@ -1,0 +1,46 @@
+[
+    {
+        "id": "07a49d7bdb1b0acc",
+        "type": "serial in",
+        "z": "87250fe62ff93055",
+        "d": true,
+        "name": "",
+        "serial": "d58797691c1a3b81",
+        "x": 70,
+        "y": 180,
+        "wires": [
+            [
+                "03dad30bdc3482cb",
+                "cb06ca0dffa8ef1b"
+            ]
+        ]
+    },
+    {
+        "id": "d58797691c1a3b81",
+        "type": "serial-port",
+        "name": "",
+        "serialport": "COM4",
+        "serialbaud": "115200",
+        "databits": 8,
+        "parity": "none",
+        "stopbits": 1,
+        "waitfor": "",
+        "dtr": "none",
+        "rts": "none",
+        "cts": "none",
+        "dsr": "none",
+        "newline": "\\n",
+        "bin": "false",
+        "out": "char",
+        "addchar": "",
+        "responsetimeout": 10000
+    },
+    {
+        "id": "252ac2bc5aaada8c",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "node-red-node-serialport": "2.0.3"
+        }
+    }
+]

@@ -5,7 +5,7 @@
 ![MQTT](https://img.shields.io/badge/MQTT-Adafruit%20IO-yellow?style=for-the-badge)
 ![Node-RED](https://img.shields.io/badge/Node--RED-Dashboard-darkred?style=for-the-badge&logo=nodered)
 
-Ce dépôt contient le code source et l'architecture logicielle de ma station météorologique connectée, développée dans le cadre de ma 3ème année de Licence Sciences pour l'Ingénieur (Spécialité ESR) à l'Université Sorbonne Paris Nord.
+Ce dépôt contient le code source et l'architecture logicielle d'une station météorologique connectée, développée dans le cadre d'une 3e année de Licence Sciences pour l'Ingénieur (Spécialité ESR) à l'Université Sorbonne Paris Nord.
 
 L'objectif de ce projet est de proposer un système d'acquisition robuste capable de mesurer 5 grandeurs physiques et d'adapter sa transmission de données selon son environnement énergétique et réseau.
 

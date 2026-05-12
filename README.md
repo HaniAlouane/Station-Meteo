@@ -1,4 +1,4 @@
-# 📡 Station Météorologique Connectée — Projet L3 SPI
+# 📡 Connected Weather Station — L3 SPI Project
 
 ![MicroPython](https://img.shields.io/badge/MicroPython-1.20-blue?style=for-the-badge&logo=python)
 ![Raspberry Pi](https://img.shields.io/badge/Raspberry%20Pi-Pico%202%20WH-red?style=for-the-badge&logo=raspberrypi)
@@ -7,91 +7,91 @@
 
 ---
 
-## 🧭 Présentation du projet
+## 🧭 Project Overview
 
-Ce dépôt contient le code source et l’architecture logicielle d’une **station météorologique connectée**, réalisée dans le cadre de la **Licence 3 Sciences pour l’Ingénieur (SPI) — spécialité ESR** à l’Université Sorbonne Paris Nord.
+This repository contains the source code and software architecture of a **connected weather station**, developed as part of the **3rd year of a Bachelor’s degree in Engineering Sciences (SPI) — ESR specialization** at Sorbonne Paris Nord University.
 
-Le projet vise à concevoir un système embarqué capable de :
-- mesurer plusieurs grandeurs environnementales,
-- assurer leur traitement en temps réel,
-- et adapter dynamiquement leur transmission selon l’état du réseau.
-
----
-
-## 🎯 Objectif du système
-
-L’objectif principal est de développer une **chaîne complète d’acquisition et de supervision IoT**, allant :
-- de la mesure physique,
-- au traitement embarqué,
-- jusqu’à la visualisation locale et Cloud.
-
-Le système doit garantir :
-- robustesse,
-- continuité de service,
-- et adaptabilité réseau.
+The goal of this project is to design an embedded system capable of:
+- measuring environmental parameters,
+- processing data in real time,
+- and dynamically adapting data transmission depending on network conditions.
 
 ---
 
-## ⚙️ Fonctionnement général
+## 🎯 System Objective
 
-La station repose sur une architecture à **double mode de fonctionnement** :
+The main objective is to build a **complete IoT acquisition and monitoring chain**, going from:
+- physical measurement,
+- embedded processing,
+- to local and cloud visualization.
 
-### 🔌 Mode filaire (nominal)
-- Transmission série USB vers un ordinateur
-- Interface locale via Node-RED
-- Envoi des données au format JSON
-- Utilisation en environnement de test ou laboratoire
-
-### 📡 Mode autonome (Wi-Fi / Cloud)
-- Activation automatique en l’absence de Node-RED
-- Connexion Wi-Fi intégrée (Raspberry Pi Pico 2 WH)
-- Transmission via protocole MQTT
-- Publication sur Adafruit IO
+The system must ensure:
+- robustness,
+- service continuity,
+- and network adaptability.
 
 ---
 
-## 📊 Grandeurs mesurées
+## ⚙️ System Operation
 
-La station permet la mesure de 5 paramètres physiques :
+The station is based on a **dual operating mode architecture**:
 
-- 🌡 Température
-- 💧 Humidité relative
-- 🌬 Pression atmosphérique
-- 💡 Luminosité
-- 🌪 Vitesse du vent
+### 🔌 Wired mode (default)
+- USB serial communication to a computer
+- Local interface using Node-RED
+- Data sent in JSON format
+- Used for testing and lab environments
+
+### 📡 Autonomous mode (Wi-Fi / Cloud)
+- Automatically activated when Node-RED is not available
+- Built-in Wi-Fi connection (Raspberry Pi Pico 2 WH)
+- MQTT communication protocol
+- Data published to Adafruit IO
 
 ---
 
-## 🧱 Architecture logicielle
+## 📊 Measured Parameters
 
-Le programme est structuré en **modules indépendants (POO)** afin de séparer clairement :
-- acquisition des capteurs,
-- traitement des données,
-- communication réseau.
+The station measures 5 environmental variables:
 
-### 📁 Organisation
+- 🌡 Temperature  
+- 💧 Relative humidity  
+- 🌬 Atmospheric pressure  
+- 💡 Light intensity  
+- 🌪 Wind speed  
 
-- `main.py` / `station_meteo.py` → orchestration générale du système  
-- `anemometre.py` → mesure de la vitesse du vent  
-- `capteur_bme.py` / `bme280.py` → température, pression, humidité  
-- `capteur_lux.py` / `veml7700.py` → luminosité  
-- `capteur_temp_analog.py` → capteur analogique LM335  
-- `flows.json` → configuration Node-RED (pipeline de données)
+---
+
+## 🧱 Software Architecture
+
+The program is structured using a **modular OOP approach**, separating:
+- sensor acquisition,
+- data processing,
+- network communication.
+
+### 📁 Project structure
+
+- `main.py` / `station_meteo.py` → main system control  
+- `anemometre.py` → wind speed measurement  
+- `capteur_bme.py` / `bme280.py` → temperature, pressure, humidity  
+- `capteur_lux.py` / `veml7700.py` → light sensor  
+- `capteur_temp_analog.py` → LM335 analog temperature sensor  
+- `flows.json` → Node-RED configuration (data pipeline)
 
 ---
 
 ## 🚀 Installation
 
-### 1. Microcontrôleur
-- Flasher la **Raspberry Pi Pico 2 WH** avec MicroPython
+### 1. Microcontroller setup
+- Flash the **Raspberry Pi Pico 2 WH** with MicroPython
 
-### 2. Déploiement
-- Copier tous les fichiers `.py` sur la carte
-- Utiliser un IDE comme **Thonny**
+### 2. Deployment
+- Copy all `.py` files to the board
+- Use an IDE such as **Thonny**
 
-### 3. Configuration utilisateur
+### 3. User configuration
 
-Remplacer les identifiants dans le fichier `secrets.py` :
+Replace credentials in `secrets.py`:
 
 ```python
 WIFI_SSID = "YOUR_WIFI_SSID"

@@ -348,4 +348,4 @@ L3 SPI — Connected Weather Station Project
 
 ---
 
-*Built with MicroPython on a Raspberry Pi Pico W — 2025*
+*Built with MicroPython on a Raspberry Pi Pico W — 2026*

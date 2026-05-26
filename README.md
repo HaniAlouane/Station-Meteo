@@ -19,9 +19,12 @@
 - [Features](#-features)
 - [Hardware](#-hardware)
 - [Wiring](#-wiring)
+- [Status LEDs](#-status-leds)
+- [OLED Display](#-oled-display)
 - [Software Architecture](#-software-architecture)
 - [Getting Started](#-getting-started)
 - [Output Channels](#-output-channels)
+- [Error Handling](#-error-handling)
 - [File Structure](#-file-structure)
 - [Third-Party Libraries](#-third-party-libraries)
 - [Author](#-author)
@@ -35,31 +38,36 @@ outdoor weather station based on the **Raspberry Pi Pico W** microcontroller
 and programmed in **MicroPython**.
 
 The station acquires five meteorological measurements every 12 seconds and
-routes the data simultaneously to three independent output channels, selected
-automatically based on what is currently available:
+routes the data to independent output channels, selected automatically based
+on what is currently available:
 
 | Priority | Channel | Condition |
 |----------|---------|-----------|
-| 1 | USB serial → Node-RED | USB cable connected and Node-RED active |
+| 1 | USB serial → Node-RED | USB connected and Node-RED active |
 | 2 | Wi-Fi → Adafruit IO MQTT | Wi-Fi available, Node-RED absent |
 | 3 | SPI → micro-SD card CSV | Always active, unconditional |
 
-The SSD1306 OLED display stays powered off by default to minimise current
-draw and wakes up only on button press.
+When Node-RED is active, Adafruit IO is automatically skipped — only one
+cloud channel transmits at a time, with Node-RED taking priority.
+
+The system is designed to **never halt**: a disconnected sensor, a missing
+SD card, or an absent network simply degrades gracefully while the rest of
+the station keeps running.
 
 ---
 
 ## ✨ Features
 
 - **5 sensors** — wind speed, outdoor temperature, pressure, humidity, ambient light
-- **3 simultaneous output channels** — SD card, Node-RED, Adafruit IO cloud
-- **Automatic channel switching** — falls back from USB to Wi-Fi seamlessly
-- **Non-blocking main loop** — anemometer is sampled on every iteration, no missed pulses
-- **OLED display** — powers on demand only, with animated progress bar
-- **3 status LEDs** — real-time feedback on SD, Wi-Fi and cloud status
-- **Auto SD remount** — recovers silently if the card is briefly disconnected
+- **3 output channels** — SD card, Node-RED, Adafruit IO cloud
+- **Automatic channel switching** — Node-RED takes priority; Adafruit IO is the fallback
+- **4 status LEDs** — real-time feedback on Wi-Fi, Node-RED, cloud and errors
+- **Fault-tolerant** — disconnected sensors are flagged but never crash the station
+- **On-device diagnostics** — hold the button 5 s to display active errors on the OLED
+- **Non-blocking main loop** — anemometer is sampled every iteration, no missed pulses
+- **Sensor range validation** — out-of-range readings trigger the error indicator
 - **50-sample ADC oversampling** — reduces LM335 noise by a factor of √50 ≈ 7×
-- **Fail-silent design** — any missing peripheral is gracefully skipped
+- **Auto SD remount** — recovers silently if the card is briefly disconnected
 
 ---
 
@@ -79,9 +87,10 @@ draw and wakes up only on button press.
 | Push button | Tactile 4-pin | GP6 | Internal pull-up |
 | LED blue | 5 mm standard | GP13 | 220 Ω series resistor |
 | LED yellow | 5 mm standard | GP14 | 220 Ω series resistor |
+| LED white | 5 mm standard | GP10 | 220 Ω series resistor |
 | LED red | 5 mm standard | GP15 | 220 Ω series resistor |
 | Resistor | 2.2 kΩ | — | LM335 bias |
-| Resistors | 220 Ω × 3 | — | LED current limiting |
+| Resistors | 220 Ω × 4 | — | LED current limiting |
 
 ---
 
@@ -109,7 +118,7 @@ Pico W  ──── 4× Dupont M-F ──────────►  SSD1306 O
 ### LM335 Temperature Sensor (ADC1 / GP27)
 
 ```
-5V (VBUS) ──── [2.2 kΩ] ──── node A ──── patte(+) LM335 ──── GND
+5V (VBUS) ──── [2.2 kΩ] ──── node A ──── anode(+) LM335 ──── cathode(−) ──── GND
                                   │
                                  GP27
 ```
@@ -127,18 +136,6 @@ Pico W  ──── 4× Dupont M-F ──────────►  SSD1306 O
 | VCC | 3.3 V | — |
 | GND | GND | — |
 
-### GPIO — LEDs and Button
-
-| Component | GPIO | Pin | Mode | Role |
-|-----------|------|-----|------|------|
-| LED blue | GP13 | 17 | OUT | Adafruit IO: 1 blink = OK, 2 = error |
-| LED yellow | GP14 | 19 | OUT | Node-RED: blinks on each transmission |
-| LED red | GP15 | 20 | OUT | Wi-Fi / MQTT error (stays on) |
-| Push button | GP6 | 9 | IN + pull-up | Short / long press detection |
-
-> Each LED is wired: GPIO → 220 Ω → anode (+) → cathode (−) → GND.
-> The button is wired between GP6 and GND. No external resistor needed.
-
 ### Power
 
 | Rail | Source | Pin |
@@ -146,6 +143,41 @@ Pico W  ──── 4× Dupont M-F ──────────►  SSD1306 O
 | 5 V | VBUS (USB) | Pin 40 |
 | 3.3 V | 3V3(OUT) regulator | Pin 36 |
 | GND | GND | Pins 3 & 38 |
+
+A full step-by-step assembly guide is available in
+[`wiring_guide.tex`](wiring_guide.tex) (compiles to PDF on Overleaf).
+
+---
+
+## 💡 Status LEDs
+
+Four LEDs provide at-a-glance status. Every blink lasts **0.5 seconds**.
+
+| LED | GPIO | Pin | Blinks when… |
+|-----|------|-----|--------------|
+| 🔵 Blue | GP13 | 17 | Wi-Fi is connected at send time (any channel) |
+| 🟡 Yellow | GP14 | 19 | Node-RED heartbeat is confirmed over USB |
+| ⚪ White | GP10 | 14 | Adafruit IO MQTT publish succeeded |
+| 🔴 Red | GP15 | 20 | Sensor error, or transmission failure |
+
+Key rules:
+
+- The blue LED blinks whenever Wi-Fi is up, **even when Node-RED is the active channel**.
+- The white LED only blinks when Adafruit IO is the active channel (Node-RED absent).
+- The red LED never triggers on a missing Wi-Fi connection — that is not an error.
+
+---
+
+## 📺 OLED Display
+
+The SSD1306 128×32 display stays powered off by default to save energy and
+wakes only on a button press:
+
+| Press | Duration | Screen |
+|-------|----------|--------|
+| Short | < 1 s | 5-slide sensor carousel (2 s each, animated progress bar) |
+| Long | 1–5 s | System status: SD / Wi-Fi / cloud state |
+| Extra long | ≥ 5 s | Error detail: each active error, or "All systems OK" |
 
 ---
 
@@ -155,14 +187,14 @@ Pico W  ──── 4× Dupont M-F ──────────►  SSD1306 O
 main.py
 ├── USB / Node-RED heartbeat detection     (uselect.poll, non-blocking)
 ├── LM335 temperature                      (ADC oversampling, 50 samples)
-├── Sensor initialisation
+├── Sensor initialisation (fault-tolerant)
 │   ├── CapteurVent       ← anemometre.py
 │   ├── CapteurBME280     ← capteur_bme.py  →  bme280.py
 │   ├── CapteurLumiere    ← capteur_lux.py  →  veml7700.py
 │   └── SDLogger          ← sd_logger.py    →  sdcard.py
 ├── OLED display (SSD1306)                 ← ssd1306.py
-├── Push button state machine              (non-blocking, ticks_diff)
-├── Status LEDs
+├── Push button state machine              (3 thresholds: short/long/extra)
+├── 4 status LEDs
 ├── Wi-Fi persistent connection            (non-blocking retry every 3 s)
 ├── MQTT / Adafruit IO publisher           (lazy connect, auto-reconnect)
 └── Main loop  (12-second acquisition cycle)
@@ -170,7 +202,7 @@ main.py
     ├── Step 1  Button event handling
     ├── Step 2  Node-RED heartbeat check
     ├── Step 3  Wi-Fi maintenance
-    └── Step 4  Sensor read + publish      (every 12 s)
+    └── Step 4  Sensor read + validate + publish   (every 12 s)
 ```
 
 ### Main Loop Design
@@ -180,21 +212,14 @@ time-based tasks use `ticks_diff()` comparisons so they never block the
 anemometer polling. At high wind speeds, pulses arrive every ~100 ms; missing
 even one causes a wrong speed reading.
 
-### OLED Button Behaviour
-
-| Press | Duration | Action |
-|-------|----------|--------|
-| Short | < 1 s | 5-slide sensor carousel, 2 s per slide, animated progress bar |
-| Long | ≥ 1 s | System diagnostic screen: SD / Node-RED / Wi-Fi status, 4 s |
-
 ---
 
 ## 🚀 Getting Started
 
 ### 1. Flash MicroPython
 
-Download the latest **Raspberry Pi Pico W** MicroPython firmware from
-[micropython.org/download/RPI_PICO_W](https://micropython.org/download/RPI_PICO_W/)
+Download the latest **Raspberry Pi Pico W** firmware from
+[micropython.org](https://micropython.org/download/RPI_PICO_W/)
 and flash it using Thonny or `picotool`.
 
 ### 2. Clone this repository
@@ -204,8 +229,6 @@ git clone https://github.com/HaniAlouane/Station-Meteo.git
 ```
 
 ### 3. Create your credentials file
-
-Copy the template and fill in your credentials:
 
 ```bash
 cp secrets.example.py secrets.py
@@ -250,17 +273,14 @@ The logger creates `meteo.csv` automatically on first boot.
 
 ### 6. Run
 
-Open `main.py` in Thonny and press **Run** (F5), or rename it to `main.py`
+Open `main.py` in Thonny and press **Run** (F5), or keep it named `main.py`
 on the Pico so it launches automatically at power-on.
 
-The serial console will show:
+Example serial output:
 
 ```
-[SD] Card mounted successfully
-[SD] New log file created: /sd/meteo.csv
-[Wi-Fi] Connecting to YourWifiName ...
 {"vitesse_vent": 2.45, "luminosite": 320.1, "temperature": 21.3, "humidite": 58.0, "pression": 1013.2}
-[STATUS] SD:OK  NR:--  WiFi:OK  ADA:OK
+[STATUS] SD:OK  NR:--  WiFi:OK  ADA:OK  Errors:0
 ```
 
 ---
@@ -281,13 +301,13 @@ timestamp,vitesse_vent,luminosite,temperature,humidite,pression
 ### Channel 2 — Node-RED (USB serial)
 
 Connect the Pico via USB to a PC running Node-RED. The station prints a JSON
-object every 12 seconds on stdout. Node-RED detects the connection by sending
-a single heartbeat byte; the station switches automatically to Wi-Fi/Adafruit
-IO when the USB link drops.
+object every 12 seconds. Node-RED confirms reception by sending a heartbeat
+byte back; if that heartbeat is lost while Node-RED was active, the red LED
+signals the dropped connection.
 
 ### Channel 3 — Adafruit IO (Wi-Fi / MQTT)
 
-Publishes to five individual feeds over MQTT (port 1883):
+Active only when Node-RED is absent. Publishes to five feeds over MQTT (port 1883):
 
 | Feed slug | Measurement | Unit |
 |-----------|-------------|------|
@@ -296,6 +316,31 @@ Publishes to five individual feeds over MQTT (port 1883):
 | `temperature` | Air temperature | °C |
 | `humidite` | Relative humidity | % |
 | `pression` | Atmospheric pressure | hPa |
+
+---
+
+## 🛡️ Error Handling
+
+The station validates every reading against a fixed range and flags any fault
+via the red LED, without ever stopping:
+
+| Measurement | Valid range |
+|-------------|-------------|
+| Temperature | −20.0 °C to +60.0 °C |
+| Humidity | 0.0 % to 100.0 % |
+| Pressure | 870.0 hPa to 1085.0 hPa |
+| Luminosity | 0 lux to 120 000 lux |
+| Wind speed | 0.0 km/h to 200.0 km/h |
+
+The red LED blinks when:
+
+- a sensor reading is outside its valid range,
+- a sensor fails to respond (disconnected at boot or during operation),
+- the Node-RED heartbeat is lost while it was previously active,
+- an Adafruit IO MQTT connection or publish fails.
+
+A missing Wi-Fi connection is **not** treated as an error. Hold the button for
+5 seconds at any time to display the list of active errors on the OLED.
 
 ---
 
@@ -319,6 +364,7 @@ Station-Meteo/
 ├── secrets.example.py       # Credentials template (safe to commit)
 ├── secrets.py               # Your real credentials (excluded by .gitignore)
 ├── .gitignore               # Prevents secrets.py from being committed
+├── wiring_guide.tex         # Hardware assembly guide (LaTeX → PDF)
 └── README.md                # This file
 ```
 
@@ -326,8 +372,8 @@ Station-Meteo/
 
 ## 📦 Third-Party Libraries
 
-These drivers are included in the repository for ease of deployment on the
-Pico.  They are not modified from their original versions.
+These drivers are included in the repository for ease of deployment.
+They are not modified from their original versions.
 
 | File | Author | Source |
 |------|--------|--------|
@@ -344,8 +390,7 @@ Pico.  They are not modified from their original versions.
 L3 SPI — Connected Weather Station Project
 
 [![GitHub](https://img.shields.io/badge/GitHub-HaniAlouane-181717?style=for-the-badge&logo=github)](https://github.com/HaniAlouane)
-[![Adafruit IO](https://img.shields.io/badge/Adafruit%20IO-HaniAL-000000?style=for-the-badge&logo=adafruit&logoColor=white)](https://io.adafruit.com/HaniAL)
 
 ---
 
-*Built with MicroPython on a Raspberry Pi Pico W — 2026*
+*Built with MicroPython on a Raspberry Pi Pico W.*
